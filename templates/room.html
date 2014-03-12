@@ -1,0 +1,41 @@
+
+<head>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="text/javascript">
+    var socketio = io.connect("192.168.197.165")
+    socketio.on("message_to_client", function(data) {
+      var user = data.user
+      var mess = data.text
+      $('#messages').append($('<span>' + user + '--' + mess + '</span><br />'))
+    })
+
+    $(document).ready(function(){
+      $('#post').click(function(){
+        var room = $('#room').val()
+        socketio.emit("post_message", {message: $('#field').val(),
+           user: $('#user-name').val().trim() || "anonimus", room: room })
+      })
+    })
+  </script>
+
+</head>
+
+<body>
+<a href="/">rooms</a>
+<h2>The {{ title }} </h2>
+users: {{#users}} {{.}} <br> {{/users}}
+<p></p>
+messages: <br />
+<div id="messages">
+  {{#messages}} <span> {{.}} </span> <br /> {{/messages}}
+</div>
+
+  <p></p>
+  name: <br /> <input type="text" id="user-name" /> <br />
+  <br />
+  message: <br /><textarea id="field" cols=35 rows=7 ></textarea> <br />
+  <input type="button" id="post" value="post" />
+  <input type="hidden" value="{{idx}}" id="room" />
+</body>
+
