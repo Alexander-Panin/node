@@ -3,39 +3,97 @@
   <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script type="text/javascript">
-    var socketio = io.connect("192.168.197.165")
+    var socketio = io.connect("{{server}}")
     socketio.on("message_to_client", function(data) {
+      var room = $('#room').val()
+      if (data.room != room) return
       var user = data.user
       var mess = data.text
-      $('#messages').append($('<span>' + user + '--' + mess + '</span><br />'))
+      var date = data.date
+      $('#messages').append($('<span>' + date + '  ' + user + '--' + mess + '</span><br />'))
+    })
+    socketio.on("enter_room_to_client", function(data) {
+      var room = $('#room').val()
+      if (data.room != room) return
+      render_users( data.users )
+    })
+    socketio.on("leave_room_to_client", function(data) {
+      var room = $('#room').val()
+      if (data.room != room) return
+      render_users( data.users )
     })
 
     $(document).ready(function(){
+      var room = $('#room').val()
+      socketio.emit("chat", {type: "enter_room", user: get_name(), room: room})
+
       $('#post').click(function(){
-        var room = $('#room').val()
-        socketio.emit("post_message", {message: $('#field').val(),
-           user: $('#user-name').val().trim() || "anonimus", room: room })
+        socketio.emit("chat",
+          {message: $('#field').val(), user: get_name(), room: room, type: "post_message" })
+      })
+      $('#file').on('change', function(e){
+        var fname = this.files[0].name
+        freader = new FileReader()
+        freader.onload = function(evnt){
+          var data = evnt.target.result
+          $.post("/rooms/" + room + "/file", {data: data, user: get_name(), fname: fname})
+             .done( function(data) {
+               var mess = "<a href=" + data.url + ">" + fname + "</a>"
+               socketio.emit("chat",
+                  {type: "post_message", message: mess, user: get_name(), room: room })
+             })
+        }
+        freader.readAsText(this.files[0])
+      })
+      $('#leave').click(function(){
+        socketio.emit("chat", {type: "leave_room", user: get_name(), room: room })
+        socketio.disconnect()
+        window.location.href = "/rooms"
       })
     })
+
+    function render_users(users) {
+      var users_dom = $('#users')
+      users_dom.empty()
+      for (var i in users)
+        users_dom.append($('<span>' + users[i] + '&nbsp;</span>'))
+    }
+
+    function get_name() {
+      var cookies = document.cookie.split(";")
+      for (var i in cookies) {
+        var arr = cookies[i].trim().split("=")
+        if (arr[0] == "user") return arr[1]
+      }
+      throw("cant find cookie user")
+    }
   </script>
 
 </head>
 
 <body>
-<a href="/">rooms</a>
+<span id="leave" style="border-bottom: 1px dotted #008ace; color: #008ace; cursor: pointer">
+  leave room
+</span>
 <h2>The {{ title }} </h2>
-users: {{#users}} {{.}} <br> {{/users}}
+
+users: <div id="users"> {{#users}} <span>{{.}} </span> {{/users}} </div>
 <p></p>
+
 messages: <br />
 <div id="messages">
-  {{#messages}} <span> {{.}} </span> <br /> {{/messages}}
+  {{#messages}} <span> {{{.}}} </span> <br /> {{/messages}}
 </div>
 
   <p></p>
-  name: <br /> <input type="text" id="user-name" /> <br />
-  <br />
   message: <br /><textarea id="field" cols=35 rows=7 ></textarea> <br />
   <input type="button" id="post" value="post" />
   <input type="hidden" value="{{idx}}" id="room" />
+
+  <p></p>
+  <p>&nbsp;</p>
+  <p>&nbsp;</p>
+
+  <input type="file" id="file" name="file" />
 </body>
 

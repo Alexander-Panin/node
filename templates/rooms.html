@@ -1,0 +1,50 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <title>node js</title>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    var socketio = io.connect("192.168.197.165")
+    socketio.on("room_to_client", function(data) {
+      var str = "<span> <a href='/rooms/" + data.idx + "/'>" + data.name + "</a> by " +
+                data.maker + '<br /> </span>'
+      $('#rooms').append($(str))
+    })
+
+    $(document).ready(function() {
+      $('#create_room').click(function(){
+        socketio.emit("chat",
+          {type: "create_room", name: $('#room-name').val().trim(), user: get_name() })
+      })
+    })
+
+    function get_name() {
+      var cookies = document.cookie.split(";")
+      for (var i in cookies) {
+        var arr = cookies[i].trim().split("=")
+        if (arr[0] == "user") return arr[1]
+      }
+      throw("cant find cookie user")
+    }
+  </script>
+
+  </script>
+</head>
+
+<body>
+  <h2>plz choose room</h2>
+  <div id="rooms">
+    {{#rooms}}
+      <span> <a href="/rooms/{{idx}}/">{{name}} </a> by {{maker}} <br /> </span>
+    {{/rooms}}
+  </div>
+  <p></p>
+  Or create your own <br />
+  <input type="text" id="room-name">
+  <button id="create_room"> create room </button>
+</body>
+</html>

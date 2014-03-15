@@ -1,0 +1,47 @@
+<head>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script>
+  $(function(){
+    $("#auth").click(function() {
+      var user = $('#user').val().trim()
+      var password = $('#pass').val().trim()
+      $.post('/auth', {user: user, password: password }, function(params) {
+        if (params["ok"]) {
+          document.cookie = "user=" + user + "; path=/"
+          document.cookie = "password=" + password + "; path=/"
+          window.location.href = "/rooms"
+        }
+        else { alert("wrong passwrod or username") }
+      })
+    })
+    $("#create_user").click(function() {
+      var user = $('#user_cr').val().trim()
+      var password = $('#pass_cr').val().trim()
+      $.post('/users', {user: user, password: password }, function(params) {
+        if (params["ok"]) {
+          alert("plz login now " + JSON.stringify(params))
+        }
+        else { alert("user already exists") }
+      })
+    })
+  })
+</script>
+</head>
+
+plz login:
+
+exists: ivan -- aa, aa -- aa
+<p></p>
+
+name: <input type="text" id="user" /> <br />
+password: <input type="text" id="pass"/> <br />
+<button id="auth">login</button>
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+or create new one <br />
+name: <input type="text" id="user_cr" /> <br />
+password: <input type="text" id="pass_cr"/> <br />
+<button id="create_user">create user</button>
+
