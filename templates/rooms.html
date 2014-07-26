@@ -8,7 +8,7 @@
   <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    var socketio = io.connect("192.168.197.165")
+    var socketio = io.connect("<%= server %>")
     socketio.on("room_to_client", function(data) {
       var str = "<span> <a href='/rooms/" + data.idx + "/'>" + data.name + "</a> by " +
                 data.maker + '<br /> </span>'
@@ -38,9 +38,13 @@
 <body>
   <h2>plz choose room</h2>
   <div id="rooms">
-    {{#rooms}}
-      <span> <a href="/rooms/{{idx}}/">{{name}} </a> by {{maker}} <br /> </span>
-    {{/rooms}}
+    <% rooms.forEach(function(room) { %>
+      <span>
+        <a href="/rooms/<%= room.idx %>/">
+          <%= room.name %>
+        </a>
+        by <%= room.maker %> <br /> </span>
+    <% }) %>
   </div>
   <p></p>
   Or create your own <br />

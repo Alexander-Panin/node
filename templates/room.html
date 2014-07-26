@@ -3,10 +3,9 @@
   <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script type="text/javascript">
-    var socketio = io.connect("{{server}}")
-    socketio.on("message_to_client", function(data) {
-      var room = $('#room').val()
-      if (data.room != room) return
+    var socketio = io.connect("<%= server %>")
+    var key = "message_to_client_" + <%= idx %>
+    socketio.on(key, function(data) {
       var user = data.user
       var mess = data.text
       var date = data.date
@@ -34,16 +33,27 @@
       $('#file').on('change', function(e){
         var fname = this.files[0].name
         freader = new FileReader()
+        var fl = this.files[0]
         freader.onload = function(evnt){
-          var data = evnt.target.result
-          $.post("/rooms/" + room + "/file", {data: data, user: get_name(), fname: fname})
-             .done( function(data) {
-               var mess = "<a href=" + data.url + ">" + fname + "</a>"
-               socketio.emit("chat",
-                  {type: "post_message", message: mess, user: get_name(), room: room })
-             })
+          var data0 = evnt.target.result
+          var img = new FormData()
+          img.append("img", fl)
+          img.append("user", get_name())
+          img.append("fname", fname)
+          $.ajax({
+            url: "/rooms/" + room + "/file",
+            data: img,
+            type: 'POST',
+            processData: false,
+            contentType: false,
+            success: function(data) {
+              var mess = "<a href=" + data.url + ">" + fname + "</a>"
+              socketio.emit("chat",
+                {type: "post_message", message: mess, user: get_name(), room: room })
+            }
+          })
         }
-        freader.readAsText(this.files[0])
+        freader.readAsDataURL(this.files[0])
       })
       $('#leave').click(function(){
         socketio.emit("chat", {type: "leave_room", user: get_name(), room: room })
@@ -75,25 +85,32 @@
 <span id="leave" style="border-bottom: 1px dotted #008ace; color: #008ace; cursor: pointer">
   leave room
 </span>
-<h2>The {{ title }} </h2>
+<h2>The <%= title %> </h2>
 
-users: <div id="users"> {{#users}} <span>{{.}} </span> {{/users}} </div>
+users: <div id="users">
+  <% users.forEach(function(user) { %>
+    <span> <%= user %><span>
+  <% }) %>
+</div>
 <p></p>
 
 messages: <br />
 <div id="messages">
-  {{#messages}} <span> {{{.}}} </span> <br /> {{/messages}}
+  <% messages.forEach(function(message) { %>
+    <span> <%- message %> </span> <br />
+  <% }) %>
 </div>
 
   <p></p>
   message: <br /><textarea id="field" cols=35 rows=7 ></textarea> <br />
   <input type="button" id="post" value="post" />
-  <input type="hidden" value="{{idx}}" id="room" />
+  <input type="hidden" value="<%= idx %>" id="room" />
 
   <p></p>
   <p>&nbsp;</p>
   <p>&nbsp;</p>
 
-  <input type="file" id="file" name="file" />
+
+    <input type="file" id="file" name="img" />
 </body>
 
