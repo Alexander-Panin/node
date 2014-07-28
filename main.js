@@ -1,35 +1,15 @@
-var http = require('http'), fs = require('fs'), Mustache = require('./mustache')
-var qs = require('querystring'), socket_io = require('socket.io'),express = require('express')
-var redis = require("redis"), async = require('async')
-var client = redis.createClient()
+var socket_io = require('socket.io')
+var express = require('express')
+var redis = require('redis')
 var path = require('path')
 
+var init_data = require('./init.js')
+var validation = require('./validation.js')
+
 //config
-var config = {}
-// make sure to change it
-config.server = "192.168.188.128"
-
-// init db gunction
-client.get("db", function(err, data) {
-  if (data == null) {
-    db.users = [{name: 'ivan', password: 'aa'}, {name: 'aa', password: 'aa'}]
-    db.rooms = [
-      { users: ['robot'],
-        messages: [{user: 'robot', text: "feel better", date: new Date}],
-        maker: 'robot',
-        name: 'default',
-      },
-    ];
-    client.set("db", JSON.stringify(db))
-  }
-})
-
-function check_auth(body, db) {
-  var u = body.user; p = body.password
-  for (var i in db.users)
-  { if (db.users[i].name == u && db.users[i].password == p) return true }
-  return false
-}
+var config = { server: "192.168.188.128" }
+var client = redis.createClient()
+init_data.db(client)
 
 var app = express();
 // set view's dir
@@ -49,8 +29,7 @@ app.post('/auth', function(req, res) {
   client.get("db", function(err, data) {
     var res_data = {}
     var db = JSON.parse(data)
-    console.log(req.body)
-    if (check_auth(req.body, db)) res_data.ok = true
+    if (validation.auth(req.body, db)) res_data.ok = true
     res.json(res_data)
   })
 })
@@ -58,6 +37,7 @@ app.post('/auth', function(req, res) {
 app.get("/rooms", function(req, res) {
   client.get("db", function(err, data) {
     var db = JSON.parse(data)
+    if (!validation.auth(req.body, db)) { res.json({err: 'bad_auth'}); return }
     res.render('rooms', {
       rooms: db.rooms.map(function(x, i) { x.idx = i; return x; }),
       server: config.server,
@@ -79,15 +59,18 @@ app.get("/rooms/:id", function(req, res) {
 })
 
 app.post("/users", function(req, res) {
-  client.get("db", function(err, data) {
-    var db = JSON.parse(data)
-    console.log(db.users)
-    var params = req.body
-    var us = db.users.filter(function(x) { return x.name == params.user })
-    if (us.length > 0) { res.json({ok: false, err: "already exist"}); return }
+  function add_user(db, params) {
     var user = { name: params.user, password: params.password }
     db.users.push(user)
     client.set("db", JSON.stringify(db))
+    return user
+  }
+
+  client.get("db", function(err, data) {
+    var db = JSON.parse(data)
+    var params = req.body
+    if (validation.user_exist) { res.json({ok: false, err: "already exist"}); return }
+    var user = add_user(db, params)
     user.ok = true
     res.json(user)
   })
@@ -104,50 +87,14 @@ app.post("/rooms/:id/file", function(req, res) {
 
 var serverApp = app.listen(80)
 var io = socket_io.listen(serverApp)
-var db = {}
 
-var messages = {
-  'post_message': {
-    apply: function(data) {
-      var room = db.rooms[data.room]
-      var mess = {user: data.user, text: data.message, date: new Date}
-      room.messages.push(mess)
-      mess.room = data.room
-      var key = "message_to_client_" + data.room
-      io.sockets.emit(key, mess)
-    }
-  },
-  'create_room': {
-    apply: function(data) {
-      var room = {name: data.name, maker: data.user, messages: [], users: [] }
-      db.rooms.push(room)
-      room.idx = db.rooms.length - 1
-      io.sockets.emit("room_to_client", room)
-    }
-  },
-  'enter_room': {
-    apply: function(data) {
-      var room = db.rooms[data.room]
-      room.users = room.users.filter(function(x) { return x != data.user })
-      room.users.push(data.user)
-      io.sockets.emit("enter_room_to_client", {users: room.users, room: data.room})
-    }
-  },
-  'leave_room': {
-    apply: function(data, socket) {
-      var room = db.rooms[data.room]
-      room.users = room.users.filter(function(x) { return x != data.user })
-      io.sockets.emit("leave_room_to_client", {users: room.users, room: data.room})
-    }
-  },
-}
-
+var message = require('./message.js')
+var message_ = message(io)
 io.sockets.on('connection', function(socket) {
   socket.on('chat', function(data) {
     client.get("db", function(err, redisdb) {
-      db = JSON.parse(redisdb)
-      messages[data.type].apply(data, socket)
-      client.set("db", JSON.stringify(db))
+     var db = message_.msg[data.type].apply(data, JSON.parse(redisdb))
+     client.set("db", JSON.stringify(db))
     })
-  });
-});
+  })
+})
