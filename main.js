@@ -37,7 +37,7 @@ app.post('/auth', function(req, res) {
 app.get("/rooms", function(req, res) {
   client.get("db", function(err, data) {
     var db = JSON.parse(data)
-    if (!validation.auth(req.body, db)) { res.json({err: 'bad_auth'}); return }
+    if (!validation.user_exist(req.body, db)) { res.json({err: 'bad_auth'}); return }
     res.render('rooms', {
       rooms: db.rooms.map(function(x, i) { x.idx = i; return x; }),
       server: config.server,
