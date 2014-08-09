@@ -5,6 +5,7 @@ var path = require('path')
 
 var init_data = require('./init.js')
 var validation = require('./validation.js')
+var db = require('db.js');
 
 //config
 var config = { server: "192.168.188.128" }
@@ -26,6 +27,7 @@ app.use(express.bodyParser({uploadDir:'./public'}))
 app.get('/', function(req, res) { res.render('auth', {}) })
 
 app.post('/auth', function(req, res) {
+  client.get("users/auth", function(err, data) {
   client.get("db", function(err, data) {
     var res_data = {}
     var db = JSON.parse(data)
@@ -34,7 +36,9 @@ app.post('/auth', function(req, res) {
   })
 })
 
+
 app.get("/rooms", function(req, res) {
+
   client.get("db", function(err, data) {
     var db = JSON.parse(data)
     if (!validation.user_exist(req.body, db)) { res.json({err: 'bad_auth'}); return }
@@ -77,12 +81,9 @@ app.post("/users", function(req, res) {
 })
 
 app.post("/rooms/:id/file", function(req, res) {
-  client.get("db", function(err, data) {
-    var db = JSON.parse(data)
-    var img = req.files.img
-    var url = "/" + img.path
-    res.json({ok: true, url: url})
-  })
+  var img = req.files.img
+  var url = "/" + img.path
+  res.json({ok: true, url: url})
 })
 
 var serverApp = app.listen(80)
