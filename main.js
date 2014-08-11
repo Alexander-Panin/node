@@ -5,14 +5,13 @@ var path = require('path')
 
 var init_data = require('./init.js')
 var validation = require('./validation.js')
-var db = require('db.js');
+var db = require('db.js')
 
 //config
 var config = { server: "192.168.188.128" }
-var client = redis.createClient()
-init_data.db(client)
+init_data.db(db)
 
-var app = express();
+var app = express()
 // set view's dir
 app.engine('.html', require('ejs').__express)
 app.set('views', __dirname + '/templates')

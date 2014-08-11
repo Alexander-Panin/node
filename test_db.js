@@ -1,74 +1,69 @@
-var db = require('./db.js')
+var dbjs = require('./db.js')
+var db = dbjs('test')
 var shared = {};
-
-exports.setUp = function(callback) { callback() }
-exports.tearDown = function(callback) { callback() }
 
 exports.create_user = function(t) {
   t.expect(1)
   var name = 'aa'
-  var new_user = db.apply('users/create', {name: name, password: 'aa'})
-  new_user.then(function(data) {
-    t.ok(data.name == name)
-    shared['user_id'] = data._id
+  var new_user = db.create_user(name, 'aa')
+  new_user.then(function(user) {
+    t.ok(user.name == name)
+    shared['user_id'] = user._id
     t.done()
   })
 }
 
 exports.users = function(t) {
   t.expect(1)
-  var users = db.apply('users/', {})
+  var users = db.users()
   users.then(function(data) { t.ok(true); t.done() })
 }
 
 exports.rooms = function(t) {
   t.expect(1)
-  var rooms = db.apply('rooms/', {})
+  var rooms = db.rooms()
   rooms.then(function(data) { console.log(data); t.ok(true); t.done() })
 }
 
 exports.create_room = function(t) {
   t.expect(1)
   var name = "room_name_aa"
-  var new_room = db.apply('rooms/create', {name: name})
-  new_room.then(function(data) {
-    t.ok(data.name == name);
-    shared['room_id'] = data._id
+  var new_room = db.create_room(name, shared['user_id'])
+  new_room.then(function(room) {
+    t.ok(room.name == name)
+    shared['room_id'] = room._id
     t.done()
   })
 }
 
 exports.room_users = function(t) {
   t.expect(1)
-  var room_users = db.apply('rooms/users/', {room_id: shared['room_id']})
+  var room_users = db.room_users( shared['room_id'])
   room_users.then(function(data) { t.ok(true); t.done() })
 }
 
 exports.enter_room = function(t) {
   t.expect(1)
-  var attrs = {room_id: shared['room_id'], user_id: shared['user_id']}
-  var room_users = db.apply('rooms/users/enter', attrs)
-  room_users.then(function(data) { t.ok(true); t.done() })
+  var room = db.enter_room(shared['user_id'], shared['room_id'])
+  room.then(function(data) { t.ok(true); t.done() })
 }
 
 exports.leave_room = function(t) {
   t.expect(1)
-  var attrs = {room_id: shared['room_id'], user_id: shared['user_id']}
-  var room_users = db.apply('rooms/users/leave', attrs)
-  room_users.then(function(data) { t.ok(true); t.done() })
+  var room = db.leave_room(shared['user_id'], shared['room_id'])
+  room.then(function(data) { t.ok(true); t.done() })
 }
 
 exports.room_messages = function(t) {
   t.expect(1)
-  var room_users = db.apply('rooms/messages/', {room_id: shared['room_id']})
-  room_users.then(function(data) { t.ok(true); t.done() })
+  var room = db.room_messages(shared['room_id'])
+  room.then(function(data) { t.ok(true); t.done() })
 }
 
 exports.create_message = function(t) {
   t.expect(1)
   var message = {text: 'hei hei', user: shared['user_id']}
-  var attrs = {room_id: shared['room_id'], message: message}
-  var room_users = db.apply('rooms/users/messages/create', attrs)
-  room_users.then(function(data) { t.ok(true); t.done() })
+  var room = db.create_message(shared['room_id'], message)
+  room.then(function(data) { t.ok(true); t.done() })
 }
 
