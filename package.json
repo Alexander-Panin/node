@@ -1,0 +1,32 @@
+{
+  "name": "snode",
+  "version": "0.0.0",
+  "description": "feel better",
+  "main": "main.js",
+  "dependencies": {
+    "async": "^0.2.10",
+    "binaryjs": "^0.2.1",
+    "ejs": "^1.0.0",
+    "express": "^4.8.5",
+    "jquery": "^2.1.0",
+    "mongoose": "^3.8.14",
+    "nodeunit": "^0.9.0",
+    "posix": "^1.0.3",
+    "redis": "^0.10.1",
+    "socket.io": "^0.9.16"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Alexander-Panin/node.git"
+  },
+  "author": "sanek panin",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Alexander-Panin/node/issues"
+  },
+  "homepage": "https://github.com/Alexander-Panin/node"
+}
