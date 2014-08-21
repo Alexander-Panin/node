@@ -12,7 +12,6 @@ function check_auth(data, db) {
 function check_existing(params, db) {
   var us = db.users.filter(function(x) { return x.name == params.user })
   return new Boolean(us.length > 0)
-  { res.json({ok: false, err: "already exist"}); return }
 }
 
 exports.auth = check_auth;
