@@ -1,45 +1,38 @@
-var io_ = null;
+var dbjs = require('./db.js');
+var db = dbjs('dev');
 
 var messages = {
-  'post_message': {
-    apply: function(data, db) {
-      var room = db.rooms[data.room]
-      var mess = {user: data.user, text: data.message, date: new Date}
-      room.messages.push(mess)
-      mess.room = data.room
-      var key = "message_to_client_" + data.room
-      io_.sockets.emit(key, mess)
-      return db
-    }
+  post_message: function(data) {
+    // require data.keys = [user_id: objId, message: String, room_id: objId]
+    var message = {user: data.user_id, text: data.message}
+    db.create_message(data.room_id, message)
+    var key = "message_to_client_" + data.room_id
+    io_.sockets.emit(key, mess)
   },
-  'create_room': {
-    apply: function(data, db) {
-      var room = {name: data.name, maker: data.user, messages: [], users: [] }
-      db.rooms.push(room)
-      room.idx = db.rooms.length - 1
-      io_.sockets.emit("room_to_client", room)
-      return db
-    }
+  create_room: function(data) {
+    // data.keys = [name: String, user_id: objId]
+    var room = db.create_room(data.name, data.user_id)
+    io_.sockets.emit("room_to_client", data.room_id)
   },
-  'enter_room': {
-    apply: function(data, db) {
-      var room = db.rooms[data.room]
-      room.users = room.users.filter(function(x) { return x != data.user })
-      room.users.push(data.user)
-      io_.sockets.emit("enter_room_to_client", {users: room.users, room: data.room})
-      return db
-    }
+  enter_room: function(data) {
+    // data.keys = [room_id: objId, user_id: objId]
+    db.enter_room(data.user_id, data.room_id)
+    var room = db.room(data.room_id, {populate: true})
+    room.then(function(room){
+      io_.sockets.emit("enter_room_to_client", room)
+    })
   },
-  'leave_room': {
-    apply: function(data, db) {
-      var room = db.rooms[data.room]
-      room.users = room.users.filter(function(x) { return x != data.user })
-      io_.sockets.emit("leave_room_to_client", {users: room.users, room: data.room})
-      return db
-    }
+  leave_room: function(data) {
+    // data.keys = [room_id: objId, user_id: objId]
+    db.leave_room(data.user_id, data.room_id)
+    var room = db.room(data.room_id, {populate: true})
+    room.then(function(room){
+      io_.sockets.emit("leave_room_to_client", room)
+    })
   },
 }
 
+var io_ = null;
 module.exports = function(io) {
   io_ = io
   return {

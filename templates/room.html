@@ -4,17 +4,17 @@
   <script src="/socket.io/socket.io.js"></script>
   <script type="text/javascript">
     var socketio = io.connect("<%= server %>")
-    var key = "message_to_client_" + <%= idx %>
+    var key = "message_to_client_" + <%= room._id %>
     socketio.on(key, function(data) {
       var user = data.user
       var mess = data.text
       var date = data.date
       $('#messages').append($('<span>' + date + '  ' + user + '--' + mess + '</span><br />'))
     })
-    socketio.on("enter_room_to_client", function(data) {
+    socketio.on("enter_room_to_client", function(room) {
       var room = $('#room').val()
-      if (data.room != room) return
-      render_users( data.users )
+      if (data.room_id != room._id) return
+      render_users( room.users )
     })
     socketio.on("leave_room_to_client", function(data) {
       var room = $('#room').val()
@@ -24,11 +24,12 @@
 
     $(document).ready(function(){
       var room = $('#room').val()
-      socketio.emit("chat", {type: "enter_room", user: get_name(), room: room})
+      var user_id = $('#user_id').val();
+      socketio.emit("chat", {type: "enter_room", user: get_name(), room_id: room})
 
       $('#post').click(function(){
         socketio.emit("chat",
-          {message: $('#field').val(), user: get_name(), room: room, type: "post_message" })
+          {message: $('#field').val(), user_id: user_id, room_id: room, type: "post_message" })
       })
       $('#file').on('change', function(e){
         var fname = this.files[0].name
@@ -49,62 +50,68 @@
             success: function(data) {
               var mess = "<a href=" + data.url + ">" + fname + "</a>"
               socketio.emit("chat",
-                {type: "post_message", message: mess, user: get_name(), room: room })
+                {type: "post_message", message: mess, user: user_id, room_id: room })
             }
           })
         }
         freader.readAsDataURL(this.files[0])
       })
       $('#leave').click(function(){
-        socketio.emit("chat", {type: "leave_room", user: get_name(), room: room })
+        socketio.emit("chat", {type: "leave_room", user: get_name(), room_id: room })
         socketio.disconnect()
-        window.location.href = "/rooms"
-      })
+      window.location.href = "/rooms"
     })
+  })
 
-    function render_users(users) {
-      var users_dom = $('#users')
-      users_dom.empty()
-      for (var i in users)
-        users_dom.append($('<span>' + users[i] + '&nbsp;</span>'))
-    }
+  function render_users(users) {
+    var users_dom = $('#users')
+    users_dom.empty()
+    for (var i in users)
+      users_dom.append($('<span>' + users[i] + '&nbsp;</span>'))
+  }
 
-    function get_name() {
-      var cookies = document.cookie.split(";")
-      for (var i in cookies) {
-        var arr = cookies[i].trim().split("=")
-        if (arr[0] == "user") return arr[1]
-      }
-      throw("cant find cookie user")
+  function parse_cookie(val) {
+    var cookies = document.cookie.split(";")
+    for (var i in cookies) {
+      var arr = cookies[i].trim().split("=")
+      if (arr[0] == val) return arr[1]
     }
-  </script>
+    throw("cant find cookie " + val)
+  }
+
+  function get_name() { return parse_cookie("user"); }
+  function get_password() { return parse_cookie("password"); }
+</script>
 
 </head>
 
 <body>
 <span id="leave" style="border-bottom: 1px dotted #008ace; color: #008ace; cursor: pointer">
-  leave room
+leave room
 </span>
-<h2>The <%= title %> </h2>
+<h2>The <%= room.name %> </h2>
 
 users: <div id="users">
-  <% users.forEach(function(user) { %>
-    <span> <%= user %><span>
+  <% room.users.forEach(function(user) { %>
+    <span> <%= user.name %><span>
   <% }) %>
 </div>
 <p></p>
 
 messages: <br />
 <div id="messages">
-  <% messages.forEach(function(message) { %>
-    <span> <%- message %> </span> <br />
+  <% room.messages.forEach(function(message) { %>
+    <span> <%- message.date %> </span>
+    <span> <%- message.user.name %> </span>
+    <span> <%- message.text %> </span> <br />
   <% }) %>
 </div>
 
   <p></p>
   message: <br /><textarea id="field" cols=35 rows=7 ></textarea> <br />
   <input type="button" id="post" value="post" />
-  <input type="hidden" value="<%= idx %>" id="room" />
+  <input type="hidden" value="<%= room._id %>" id="room" />
+  <input type="hidden" value="<%= user_id %>" id="user_id" />
 
   <p></p>
   <p>&nbsp;</p>

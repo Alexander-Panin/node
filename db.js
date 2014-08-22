@@ -3,12 +3,12 @@ var mongoose = require('mongoose');
 var userSchema = mongoose.Schema({ name: String, password: String })
 var roomSchema = mongoose.Schema({
   name: String,
-  owner: mongoose.Schema.Types.ObjectId,
-  users: [mongoose.Schema.Types.ObjectId],
+  owner: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
+  users: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}],
   messages: [{
     text: String,
     date: {type: Date, default: Date.now },
-    user: mongoose.Schema.Types.ObjectId,
+    user: {type: mongoose.Schema.Types.ObjectId, ref: 'User'}
   }],
 })
 
@@ -16,19 +16,32 @@ var Room = mongoose.model('Room', roomSchema)
 var User = mongoose.model('User', userSchema)
 
 var namespace = {
-  users: function(name, password) {
-    if (name && password) return User.find({name: name, password: password}).exec()
-    return User.find().exec()
+  users: function() {
+    var users = User.find().exec();
+    return users;
   },
-
+  user: function(name, password) {
+    var user = User.findOne({name: name, password: password}).exec();
+    return user;
+  },
   create_user: function(name, password) {
     var user = User.create({name: name, password: password})
     return user
   },
+  room: function(room_id, options) {
+    options = options || {};
+    var room = Room.findOne({_id: room_id})
+    if (options.populate)
+      room = room.populate('owner users messages.user', 'name');
+    return room.exec();
+  },
 
-  rooms: function() {
-    var rooms = Room.find().exec()
-    return rooms
+  rooms: function(options) {
+    options = options || {};
+    var rooms = Room.find()
+    if (options.populate)
+      rooms = rooms.populate('owner users messages.user', 'name');
+    return rooms.exec();
   },
 
   create_room: function(name, owner) {
@@ -37,7 +50,7 @@ var namespace = {
   },
 
   room_users: function(room_id) {
-    var room = Room.find({_id: room_id}, 'users').exec()
+    var room = Room.findOne({_id: room_id}, 'users').exec();
     return room
   },
 
@@ -68,7 +81,7 @@ module.exports = function(dbtype) {
   var connect_string = 'mongodb://localhost/' + dbtype;
   mongoose.connect(connect_string);
   var db = mongoose.connection;
-  db.on('error', console.error.bind(console, 'connection eror'))
+  db.on('error', console.error.bind(console, 'connection error'))
   db.once('open', function() { console.log.bind(console, 'yeap'); })
   return namespace
 }
