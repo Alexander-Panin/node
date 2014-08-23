@@ -27,7 +27,6 @@ app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({extended: false}))
 app.use(cookieParser())
 app.use("/public", express.static(path.join(__dirname, 'public')))
-//app.use(express.bodyParser({uploadDir:'./public'}))
 app.use(multer({ dest:'./public/'}))
 
 app.get('/', function(req, res) { res.render('auth', {}) })
