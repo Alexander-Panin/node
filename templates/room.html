@@ -4,32 +4,36 @@
   <script src="/socket.io/socket.io.js"></script>
   <script type="text/javascript">
     var socketio = io.connect("<%= server %>")
-    var key = "message_to_client_" + <%= room._id %>
+    var key = "message_to_client_" + "<%= room._id %>"
     socketio.on(key, function(data) {
       var user = data.user
       var mess = data.text
       var date = data.date
       $('#messages').append($('<span>' + date + '  ' + user + '--' + mess + '</span><br />'))
     })
-    socketio.on("enter_room_to_client", function(room) {
+    socketio.on("enter_room_to_client", function(data) {
       var room = $('#room').val()
-      if (data.room_id != room._id) return
-      render_users( room.users )
+      if (data._id != room) return
+      render_users( data.users )
     })
     socketio.on("leave_room_to_client", function(data) {
       var room = $('#room').val()
-      if (data.room != room) return
+      if (data._id != room) return
       render_users( data.users )
     })
 
     $(document).ready(function(){
       var room = $('#room').val()
       var user_id = $('#user_id').val();
-      socketio.emit("chat", {type: "enter_room", user: get_name(), room_id: room})
+      socketio.emit("chat", {type: "enter_room", user_id: user_id, room_id: room})
 
       $('#post').click(function(){
         socketio.emit("chat",
-          {message: $('#field').val(), user_id: user_id, room_id: room, type: "post_message" })
+          {message: $('#field').val(),
+           user_id: user_id,
+           user: get_name(),
+           room_id: room,
+           type: "post_message" })
       })
       $('#file').on('change', function(e){
         var fname = this.files[0].name
@@ -50,14 +54,19 @@
             success: function(data) {
               var mess = "<a href=" + data.url + ">" + fname + "</a>"
               socketio.emit("chat",
-                {type: "post_message", message: mess, user: user_id, room_id: room })
+                {type: "post_message",
+                 message: mess,
+                 user_id: user_id,
+                 user: get_name(),
+                 room_id: room
+                })
             }
           })
         }
         freader.readAsDataURL(this.files[0])
       })
       $('#leave').click(function(){
-        socketio.emit("chat", {type: "leave_room", user: get_name(), room_id: room })
+        socketio.emit("chat", {type: "leave_room", user_id: user_id, room_id: room })
         socketio.disconnect()
       window.location.href = "/rooms"
     })
@@ -67,7 +76,7 @@
     var users_dom = $('#users')
     users_dom.empty()
     for (var i in users)
-      users_dom.append($('<span>' + users[i] + '&nbsp;</span>'))
+      users_dom.append($('<span>' + users[i].name + '&nbsp;</span>'))
   }
 
   function parse_cookie(val) {
@@ -101,8 +110,8 @@ users: <div id="users">
 messages: <br />
 <div id="messages">
   <% room.messages.forEach(function(message) { %>
-    <span> <%- message.date %> </span>
-    <span> <%- message.user.name %> </span>
+    <span> <%- message.date.toUTCString() %> </span> --
+    <span> <%- message.user.name %> </span> --
     <span> <%- message.text %> </span> <br />
   <% }) %>
 </div>

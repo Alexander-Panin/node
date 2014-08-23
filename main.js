@@ -20,17 +20,22 @@ app.set('views', __dirname + '/templates')
 app.set('view engine', 'html')
 
 // settings
-app.use(express.json())
-app.use(express.urlencoded())
+var bodyParser = require('body-parser')
+var cookieParser = require('cookie-parser')
+var multer = require('multer')
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({extended: false}))
+app.use(cookieParser())
 app.use("/public", express.static(path.join(__dirname, 'public')))
-app.use(express.bodyParser({uploadDir:'./public'}))
+//app.use(express.bodyParser({uploadDir:'./public'}))
+app.use(multer({ dest:'./public/'}))
 
 app.get('/', function(req, res) { res.render('auth', {}) })
 
 function _auth_check(req, res, next, options) {
-  // options.keys = [right: function, left: function]
-  var password = req.body.password;
-  var username = req.body.user;
+  // options.keys = [right: function, left: function, where: cookies or body]
+  var password = options.where == "body" ? req.body.password : req.cookies.password;
+  var username = options.where == "body" ? req.body.user : req.cookies.user;
   var user = db.user(username, password);
   user.then(function(user) {
     if (!options.right)
@@ -42,11 +47,11 @@ function _auth_check(req, res, next, options) {
 
 function is_user_exist(req, res, next) {
   var l = function(req, next) { next(); }
-  _auth_check(req, res, next, {left: l});
+  _auth_check(req, res, next, {left: l, where: "body"});
 }
 function check_auth(req, res, next) {
   var l = function(req, next) { next(new Error(401)); }
-  _auth_check(req, res, next, {left: l});
+  _auth_check(req, res, next, {left: l, where: "cookies"});
 }
 
 app.post('/auth', is_user_exist, function(req, res) {
@@ -66,12 +71,12 @@ app.get("/rooms/:id", check_auth, function(req, res) {
   var room = db.room(room_id, {populate: true})
   room.then(function(room) {
     res.render('room', { server: config.server, room: room, user_id: req.current_user._id});
-  }
+  })
 })
 
 app.post("/users", is_user_exist, function(req, res) {
   if (req.current_user) { res.json({ok: false, err: 'already exist'}); return; }
-  var user = db.create_user();
+  var user = db.create_user(req.body.user, req.body.password);
   user.then(function(user){
     res.json({ok: true, user: user})
   })
@@ -91,10 +96,5 @@ var message_ = message(io)
 io.sockets.on('connection', function(socket) {
   socket.on('chat', function(data) {
     message_.msg[data.type](data)
-
-    client.get("db", function(err, redisdb) {
-     var db = message_.msg[data.type].apply(data, JSON.parse(redisdb))
-     client.set("db", JSON.stringify(db))
-    })
   })
 })

@@ -11,7 +11,7 @@
     var socketio = io.connect("<%= server %>")
     socketio.on("room_to_client", function(data) {
       var str = "<span> <a href='/rooms/" + data._id + "/'>" + data.name + "</a> by " +
-                data.owner + '<br /> </span>';
+                data.user + '<br /> </span>';
       $('#rooms').append($(str));
     })
 
@@ -19,12 +19,25 @@
       var user_id = $('#user_id').val();
       $('#create_room').click(function(){
         socketio.emit("chat",
-          {type: "create_room", name: $('#room-name').val().trim(), user_id: user_id});
+          {type: "create_room",
+           name: $('#room-name').val().trim(),
+           user_id: user_id,
+           user: get_name(),
+          });
       })
     })
 
-  </script>
+    function parse_cookie(val) {
+      var cookies = document.cookie.split(";")
+      for (var i in cookies) {
+        var arr = cookies[i].trim().split("=")
+        if (arr[0] == val) return arr[1]
+      }
+      throw("cant find cookie " + val)
+    }
 
+    function get_name() { return parse_cookie("user"); }
+    function get_password() { return parse_cookie("password"); }
   </script>
 </head>
 

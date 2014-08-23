@@ -4,15 +4,19 @@ var db = dbjs('dev');
 var messages = {
   post_message: function(data) {
     // require data.keys = [user_id: objId, message: String, room_id: objId]
-    var message = {user: data.user_id, text: data.message}
-    db.create_message(data.room_id, message)
+    var attrs = {user: data.user_id, text: data.message, date: new Date() }
+    db.create_message(data.room_id, attrs)
     var key = "message_to_client_" + data.room_id
-    io_.sockets.emit(key, mess)
+    attrs.user = data.user
+    io_.sockets.emit(key, attrs)
   },
   create_room: function(data) {
     // data.keys = [name: String, user_id: objId]
     var room = db.create_room(data.name, data.user_id)
-    io_.sockets.emit("room_to_client", data.room_id)
+    room.then(function(room) {
+      room.user = data.user
+      io_.sockets.emit("room_to_client", room)
+    })
   },
   enter_room: function(data) {
     // data.keys = [room_id: objId, user_id: objId]

@@ -24,7 +24,7 @@ exports.users = function(t) {
 
 exports.user = function(t) {
   t.expect(1)
-  var user = db.users(shared.username, shared.password);
+  var user = db.user(shared.username, shared.password);
   user.then(function(user) {
     t.ok(user.name == shared.username);
     t.done();
